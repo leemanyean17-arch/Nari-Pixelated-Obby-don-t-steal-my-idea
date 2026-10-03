@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Become Nari: Pixel Obby</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}body{margin:0;overflow:hidden;background:#eadcff;font-family:system-ui,sans-serif;touch-action:none}
+canvas{display:block;width:100vw;height:100vh;image-rendering:pixelated}
+#hud{position:fixed;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;gap:5px;color:#67457d;font-weight:900;pointer-events:none}.pill{background:#ffffffdf;border:2px solid white;border-radius:15px;padding:7px 10px;font-size:14px}
+#controls{position:fixed;bottom:16px;left:0;right:0;display:flex;justify-content:space-between;padding:0 15px}button{font:inherit;font-weight:900;border:3px solid white;background:#ffffffdf;color:#67457d;border-radius:20px;padding:13px 17px;box-shadow:0 5px #b990ca}#jump{min-width:96px}
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#f7e9ffef;text-align:center;padding:18px}.card{background:white;border:4px solid #ffd3ef;border-radius:28px;padding:24px;width:min(92vw,430px);color:#67457d;box-shadow:0 10px 30px #8662a044}.big{font-size:58px}h1{margin:0 0 8px}.main{background:#ffd0ed;padding:13px 22px}#win,#lose{display:none}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="hud"><div class="pill">🐰 NARI OBBY</div><div class="pill">⭐ <span id="sc">0</span>/28</div><div class="pill">🏁 <span id="st">1</span>/10</div></div>
+<div id="controls"><div><button id="L">◀</button> <button id="R">▶</button></div><button id="jump">JUMP ✨</button></div>
+<div id="start" class="overlay"><div class="card"><div class="big">🐰💗✨</div><h1>Become Nari!</h1><p>Beat the pixel-magical obby! Collect stars, leap across platforms, and reach the giant magic tree.</p><p>◀ ▶ to move • JUMP to jump</p><button class="main" id="play">BECOME NARI 💗</button></div></div>
+<div id="lose" class="overlay"><div class="card"><div class="big">🐰🌷</div><h1>Don’t give up!</h1><p>“Every jump is practice for the next one. You’ve got this!” ✨</p><button class="main" id="retry">TRY AGAIN 🌸</button></div></div>
+<div id="win" class="overlay"><div class="card"><div class="big">🐰👑✨</div><h1>YOU DID IT!</h1><p>Nari beat the pixel obby! You’re a star! 🌈</p><p>Stars collected: <b><span id="final">0</span>/28</b></p><button class="main" id="again">PLAY AGAIN 🔄</button></div></div>
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');let W,H;
+function resize(){W=innerWidth;H=innerHeight;canvas.width=W*devicePixelRatio;canvas.height=H*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}addEventListener('resize',resize);resize();
+const plats=[[0,470,550,35],[620,420,170,25],[850,350,160,25],[1080,440,180,25],[1340,380,160,25],[1570,310,190,25],[1850,430,190,25],[2120,360,170,25],[2370,300,180,25],[2620,415,210,25],[2910,340,170,25],[3160,275,190,25],[3430,395,180,25],[3690,325,180,25],[3950,260,190,25],[4230,380,180,25],[4490,305,180,25],[4760,230,220,25],[5100,390,180,25],[5360,315,160,25],[5610,245,190,25],[5900,390,170,25],[6160,320,190,25],[6430,250,180,25],[6700,390,180,25],[6970,300,190,25],[7250,220,220,25],[7600,350,240,25],[7900,260,330,25]];
+const stars0=[[400,420],[675,375],[925,305],[1150,405],[1400,335],[1660,265],[1930,390],[2200,315],[2460,255],[2730,365],[3000,290],[3260,225],[3520,345],[3780,275],[4040,210],[4320,330],[4580,255],[4850,180],[5160,345],[5420,270],[5700,200],[5970,345],[6240,275],[6500,205],[6780,345],[7050,255],[7360,175],[7710,305]];
+let p,stars,cam,run=false,won=false,keys={l:false,r:false},bits=[],audioCtx;
+function reset(){p={x:80,y:400,vx:0,vy:0,w:34,h:44,on:false};stars=stars0.map(a=>a.slice());cam=0;won=false;bits=[];document.getElementById('sc').textContent='0';document.getElementById('st').textContent='1'}
+reset();
+function beep(freq,dur=.11){try{audioCtx ||= new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();let o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='square';o.frequency.value=freq;g.gain.value=.045;o.connect(g);g.connect(audioCtx.destination);o.start();g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);o.stop(audioCtx.currentTime+dur)}catch(e){}}
+function burst(a,b){for(let i=0;i<9;i++)bits.push({x:a,y:b,vx:(Math.random()-.5)*5,vy:-Math.random()*4-1,t:35})}
+function jump(){if(p.on){p.vy=-11;p.on=false;beep(420,.07);burst(p.x+17,p.y+42)}}
+function update(){if(!run||won)return;if(keys.l)p.vx-=.65;if(keys.r)p.vx+=.65;p.vx*=.84;p.vx=Math.max(-6,Math.min(6,p.vx));p.vy+=.55;p.x+=p.vx;p.y+=p.vy;p.on=false;
+for(const q of plats)if(p.x+p.w>q[0]&&p.x<q[0]+q[2]&&p.y+p.h>=q[1]&&p.y+p.h<=q[1]+18&&p.vy>=0){p.y=q[1]-p.h;p.vy=0;p.on=true}
+if(p.y>650){run=false;document.getElementById('lose').style.display='flex';return}p.x=Math.max(0,Math.min(8250,p.x));
+for(let i=stars.length-1;i>=0;i--){let s=stars[i],dx=p.x+17-s[0],dy=p.y+20-s[1];if(dx*dx+dy*dy<800){burst(s[0],s[1]);beep(880,.09);setTimeout(()=>beep(1320,.1),65);stars.splice(i,1)}}
+if(p.x>8100){won=true;document.getElementById('final').textContent=28-stars.length;document.getElementById('win').style.display='flex'}
+cam+=(p.x-W*.35-cam)*.09;cam=Math.max(0,Math.min(8400-W,cam));for(const b of bits){b.x+=b.vx;b.y+=b.vy;b.vy+=.12;b.t--}bits=bits.filter(b=>b.t>0);
+document.getElementById('sc').textContent=28-stars.length;document.getElementById('st').textContent=Math.min(10,Math.floor(p.x/810)+1)}
+function drawBunny(){ctx.save();ctx.translate(Math.round(p.x+17),Math.round(p.y+22));ctx.imageSmoothingEnabled=false;
+ctx.fillStyle='#fff';ctx.fillRect(-13,-49,9,26);ctx.fillRect(4,-49,9,26);ctx.fillStyle='#f3a9d4';ctx.fillRect(-10,-45,4,19);ctx.fillRect(7,-45,4,19);
+ctx.fillStyle='#fff';ctx.fillRect(-21,-25,42,36);ctx.fillRect(-16,11,32,22);
+ctx.fillStyle='#f7b8dc';ctx.fillRect(-21,-5,7,8);ctx.fillRect(14,-5,7,8);
+ctx.fillStyle='#67457d';ctx.fillRect(-11,-14,5,6);ctx.fillRect(7,-14,5,6);ctx.fillStyle='#e98fc6';ctx.fillRect(-3,-5,7,5);ctx.fillRect(-1,0,3,4);
+ctx.fillStyle='#ffd86e';ctx.fillRect(22,-31,5,5);ctx.fillRect(25,-34,5,5);ctx.fillStyle='#d7b5f3';ctx.fillRect(-19,23,13,5);ctx.fillRect(7,23,13,5);ctx.restore()}
+function draw(){ctx.clearRect(0,0,W,H);let g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#f7dcff');g.addColorStop(1,'#d9f1ff');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.save();ctx.translate(-cam,0);
+for(let a=0;a<8400;a+=330){ctx.fillStyle='#ffffff88';ctx.fillRect(a+70,95,50,12);ctx.fillRect(a+85,83,30,12);ctx.fillRect(a+105,95,48,12)}
+for(const q of plats){ctx.fillStyle='#b98bd2';ctx.fillRect(...q);ctx.fillStyle='#f7c7ed';ctx.fillRect(q[0],q[1],q[2],7);for(let a=q[0]+10;a<q[0]+q[2];a+=28){ctx.fillStyle='#ffffff55';ctx.fillRect(a,q[1]+13,7,5)}}
+for(const s of stars){ctx.fillStyle='#fff18a';ctx.font='bold 28px monospace';ctx.fillText('★',s[0]-12,s[1]+10)}
+ctx.fillStyle='#8d68a5';ctx.fillRect(8000,120,45,120);ctx.fillStyle='#f3b7e8';ctx.fillRect(7960,65,125,80);ctx.fillRect(7980,45,85,20);ctx.fillRect(7940,90,20,35);ctx.fillRect(8085,90,20,35);ctx.fillStyle='white';ctx.font='bold 18px monospace';ctx.fillText('MAGIC TREE!',7950,35);
+for(const b of bits){ctx.globalAlpha=b.t/35;ctx.fillStyle='#fff1a0';ctx.fillRect(Math.round(b.x),Math.round(b.y),6,6);ctx.globalAlpha=1}drawBunny();ctx.restore()}
+function loop(){update();draw();requestAnimationFrame(loop)}loop();
+function hold(id,k){let b=document.getElementById(id);b.onpointerdown=e=>{e.preventDefault();keys[k]=true};b.onpointerup=b.onpointercancel=b.onpointerleave=()=>keys[k]=false}hold('L','l');hold('R','r');document.getElementById('jump').onpointerdown=e=>{e.preventDefault();jump()};
+addEventListener('keydown',e=>{if(e.key==='ArrowLeft')keys.l=true;if(e.key==='ArrowRight')keys.r=true;if(e.key===' '||e.key==='ArrowUp')jump()});addEventListener('keyup',e=>{if(e.key==='ArrowLeft')keys.l=false;if(e.key==='ArrowRight')keys.r=false});
+document.getElementById('play').onclick=()=>{document.getElementById('start').style.display='none';run=true;reset()};document.getElementById('retry').onclick=()=>{document.getElementById('lose').style.display='none';run=true;reset()};document.getElementById('again').onclick=()=>{document.getElementById('win').style.display='none';run=true;reset()};
+</script></body></html>
